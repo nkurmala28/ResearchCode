@@ -1,91 +1,72 @@
-from datetime import datetime
-from geopy.distance import great_circle
-from anytree import Node, RenderTree
 import xlsxwriter as xw
-
 from datetime import datetime
 from geopy.distance import great_circle
-from anytree import Node, RenderTree
 
-parentslist = []
-parentslistID = []
-childlistID = []
+pcset = {}
+# family id, relationship id,
 
+workbook = xw.Workbook('pleasework2.xlsx')
+outsheet = workbook.add_worksheet(name="Data")
+y_index = 0
+# 000 000 first 3 are for parents, last 3 are for
+rel_id = 000000
 
-def parentfinder(filename):
+def main():
+    excel_init()
+    parent_child_finder("trialdata.csv")
+    workbook.close()
+    pass
+
+def parent_child_finder(filename):
     fileopen = open(filename)
     dataset = fileopen.readlines()
     count = 0
+    fam_id = 0
     for parent in dataset:
-        parent = parent.strip()
-        id1, time1, latt, long = parent.split(',')
-        parent = parent.split(',')
-        if int(id1) in childlistID:
-            continue
-        if int(id1) in parentslistID:
-            continue
-        datetime1 = datetime.strptime(time1, '%d-%b-%y')
-        loc1 = (float(latt), float(long))
+        fam_id +=1
+        global rel_id
+        rel_id += 1000
         count += 1
-        internalcount = count
-        for child in dataset[count:]:
-            internalcount += 1
-            child = child.strip()
-            id2, time2, latt2, long2 = child.split(',')
-            if int(id2) in childlistID:
-                continue
-            child = child.split(',')
-            datetime2 = datetime.strptime(time2, '%d-%b-%y')
-            loc2 = (float(latt2), float(long2))
-            duration = (datetime2 - datetime1).days
-            if duration < 0:
-                continue
-            dist = great_circle(loc1, loc2).kilometers
-            if 0 < dist < 10 and 0 < duration <= 5:
-                parentnode = Node(str(parent[0]))  # how do I store my data on the nodes? do a .latt? .long?
-                if int(id1) not in parentslistID:
-                    parentslistID.append(int(id1))
-                    parentslist.append(parentnode)
-                childfinder(dataset[internalcount - 2:], parentnode, parent)
+        depth = 0
+        childfinder(dataset[count + 1:], parent, depth,fam_id,rel_id)
+        continue
 
 
-def childfinder(trial, parentnode, parent):
+def childfinder(trial,parent,depth,fam_id,rel_id):
+    global y_index, pcset
+    id1, time1, latt1, long1 = data_split(parent)
+    loc1 = (latt1, long1)
     count = 0
+    depth += 1
     for otherchildren in trial:
         count += 1
-        otherchildren = otherchildren.strip()
-        id2, time2, latt2, long2 = otherchildren.split(',')
-        otherchildren = otherchildren.split(',')
-        if int(id2) in childlistID:
+        id2, time2, latt2, long2 = data_split(otherchildren)
+        if id1 in pcset and pcset[id1] == id2:
             continue
-        datetime1 = datetime.strptime(parent[1], '%d-%b-%y')
-        datetime2 = datetime.strptime(time2, '%d-%b-%y')
-        loc1 = (float(parent[2]), float(parent[3]))
-        loc2 = (float(latt2), float(long2))
-        duration = (datetime2 - datetime1).days
+        loc2 = (latt2,long2)
+        duration = (time2 - time1).days
         if duration < 0:
             continue
         if duration > 5:
             break
         dist = great_circle(loc1, loc2).kilometers
-        if 0 < dist < 10 and 0 < duration <= 5:
-            childlistID.append(int(otherchildren[0]))
-            childnode = Node(str(otherchildren[0]), parent=parentnode)
-            childfinder(trial[count + 1:], childnode, otherchildren)
+        if dist > 0 and dist < 10 and duration > 0 and duration <= 5:
+            # relationship id
+            y_index += 1
+            pcset[id1] = id2
+            rel_id += 1
+            result_excel(rel_id,fam_id,id1,id2,depth,latt1,long1,latt2,long2,duration,dist)
+            childfinder(trial[count+1:], otherchildren,depth,fam_id,rel_id)
             continue
 
 
-parentfinder("trialdata.csv")
-for i in parentslist:
-    for pre, fill, node in RenderTree(i):
-        print("%s%s" % (pre, node.name))
-
-# .....................
+def data_split(node):
+    parent = node.strip()
+    id, time, latt, long = parent.split(',')
+    return int(id), datetime.strptime(time, '%d-%b-%y'), float(latt), float(long)
 
 
-def excelResult_init():
-    workbook = xw.Workbook('GCData.xlsx')
-    outsheet = workbook.add_worksheet(name="Data1")
+def excel_init():
     outsheet.write("A1", "Relationship ID")  # (y,0)
     outsheet.write("B1", "Family ID")  # (y,1)
     outsheet.write("C1", "Parent ID")
@@ -97,22 +78,26 @@ def excelResult_init():
     outsheet.write("I1", "Child Longitude")
     outsheet.write("J1", "Duration")
     outsheet.write("K1", "Distance from Children")
-    return outsheet
 
 
-def result_excel(outsheet,Rel_ID,Fam_ID,P_ID,C_ID,Depth,P_latt,P_long,C_latt,C_long,Dur,Dist):
-    outsheet.write("A1", Rel_ID)  # (y,0)
-    outsheet.write("B1", Fam_ID)  # (y,1)
-    outsheet.write("C1", P_ID)
-    outsheet.write("D1", C_ID)
-    outsheet.write("E1", Depth)  # (y,2)
-    outsheet.write("F1", P_latt)  # (y,3)
-    outsheet.write("G1", P_long)
-    outsheet.write("H1", C_latt)
-    outsheet.write("I1", C_long)
-    outsheet.write("J1", Dur)
-    outsheet.write("K1", Dist)
+
+def result_excel(Rel_ID, Fam_ID, P_ID, C_ID, Depth, P_latt, P_long, C_latt, C_long, Dur, Dist):
+    outsheet.write(y_index,0, Rel_ID)  # (y,0)
+    outsheet.write(y_index,1, Fam_ID)  # (y,1)
+    outsheet.write(y_index,2, P_ID)
+    outsheet.write(y_index,3, C_ID)
+    outsheet.write(y_index,4, Depth)  # (y,2)
+    outsheet.write(y_index,5, P_latt)  # (y,3)
+    outsheet.write(y_index,6, P_long)
+    outsheet.write(y_index,7, C_latt)
+    outsheet.write(y_index,8, C_long)
+    outsheet.write(y_index,9, Dur)
+    outsheet.write(y_index,10, Dist)
+
+
 #     direction
+if __name__ == "__main__":
+    main()
 
 
 """"
