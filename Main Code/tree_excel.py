@@ -2,15 +2,19 @@ import xlsxwriter as xw
 from datetime import datetime
 from geopy.distance import great_circle
 
-workbook = xw.Workbook('pleasework2.4.xlsx')
+# ALWAYS MAKE SURE THE DATA IS ALREADY PRE ARRANGED FROM PAST TO PRESENT DATEWISE and delete first row if column headers
+
+workbook = xw.Workbook('C:/Users/k2kis/Desktop/Research/Code/results/20year.xlsx')
 outsheet = workbook.add_worksheet(name="Data")
 pcset = {}
 y_index = 0
 
 def main():
+    print(datetime.now())
     excel_init()
-    parent_child_finder("trialdata.csv")
+    parent_child_finder("../results/20yeardata.csv")
     workbook.close()
+    print(datetime.now())
     pass
 
 def parent_child_finder(filename):
@@ -18,7 +22,7 @@ def parent_child_finder(filename):
     dataset = fileopen.readlines()
     count = 0
     fam_id = 0
-    rel_id = 000000
+    rel_id = 0
     for parent in dataset:
         fam_id +=1
         rel_id += 1000
@@ -30,13 +34,15 @@ def parent_child_finder(filename):
 
 def childfinder(trial,parent,depth,fam_id,rel_id):
     global y_index, pcset
-    id1, time1, latt1, long1 = data_split(parent)
+    id1, date1, latt1, long1, deaths1 = data_split(parent)
+    time1 = datetime.strptime(date1, '%d-%b-%y')
     loc1 = (latt1, long1)
     count = 0
     depth += 1
     for otherchildren in trial:
         count += 1
-        id2, time2, latt2, long2 = data_split(otherchildren)
+        id2, date2, latt2, long2, deaths2 = data_split(otherchildren)
+        time2 = datetime.strptime(date2, '%d-%b-%y')
         if id1 in pcset and pcset[id1] == id2:
             continue
         loc2 = (latt2,long2)
@@ -51,15 +57,15 @@ def childfinder(trial,parent,depth,fam_id,rel_id):
             y_index += 1
             pcset[id1] = id2
             rel_id += 1
-            result_excel(rel_id,fam_id,id1,id2,depth,latt1,long1,latt2,long2,duration,dist)
+            result_excel(rel_id,fam_id,id1,id2,depth,latt1,long1,latt2,long2,date1,date2,duration,dist,deaths1+deaths2)
             childfinder(trial[count+1:], otherchildren,depth,fam_id,rel_id)
             continue
 
 
 def data_split(node):
     parent = node.strip()
-    id, time, latt, long = parent.split(',')
-    return int(id), datetime.strptime(time, '%d-%b-%y'), float(latt), float(long)
+    id, date, latt, long, deaths = parent.split(',')
+    return int(id), date, float(latt), float(long), int(deaths)
 
 
 def excel_init():
@@ -72,12 +78,15 @@ def excel_init():
     outsheet.write("G1", "Parent Longitude")
     outsheet.write("H1", "Child Latitude")
     outsheet.write("I1", "Child Longitude")
-    outsheet.write("J1", "Duration")
-    outsheet.write("K1", "Distance from Children")
+    outsheet.write("J1","Parent Date")
+    outsheet.write("K1","Child Date")
+    outsheet.write("L1", "Duration")
+    outsheet.write("M1", "Distance from Children")
+    outsheet.write('N1',"Casualties")
 
 
 
-def result_excel(Rel_ID, Fam_ID, P_ID, C_ID, Depth, P_latt, P_long, C_latt, C_long, Dur, Dist):
+def result_excel(Rel_ID, Fam_ID, P_ID, C_ID, Depth, P_latt, P_long, C_latt, C_long,P_date,C_date,Dur, Dist,Casualties):
     outsheet.write(y_index,0, Rel_ID)  # (y,0)
     outsheet.write(y_index,1, Fam_ID)  # (y,1)
     outsheet.write(y_index,2, P_ID)
@@ -87,8 +96,11 @@ def result_excel(Rel_ID, Fam_ID, P_ID, C_ID, Depth, P_latt, P_long, C_latt, C_lo
     outsheet.write(y_index,6, P_long)
     outsheet.write(y_index,7, C_latt)
     outsheet.write(y_index,8, C_long)
-    outsheet.write(y_index,9, Dur)
-    outsheet.write(y_index,10, Dist)
+    outsheet.write(y_index,9, P_date)
+    outsheet.write(y_index,10,C_date)
+    outsheet.write(y_index,11, Dur)
+    outsheet.write(y_index,12, Dist)
+    outsheet.write(y_index,13,Casualties)
 
 
 #     direction
