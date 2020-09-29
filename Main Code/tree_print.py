@@ -1,3 +1,5 @@
+# for this use different python other than conda
+
 from datetime import datetime
 from geopy.distance import great_circle
 from anytree import Node, RenderTree

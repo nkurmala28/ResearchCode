@@ -5,8 +5,8 @@ from geopy.distance import great_circle
 # ALWAYS MAKE SURE THE DATA IS ALREADY PRE ARRANGED FROM PAST TO PRESENT DATE-WISE
 # and delete first row if column headers
 
-# input your own dire and name
-workbook = xw.Workbook('C:/Users/k2kis/Desktop/Research/Code/results/trialagainB2.xlsx')
+# input your own dire and name for result
+workbook = xw.Workbook('C:/Users/k2kis/Desktop/Research/Code/results/worksomehow.xlsx')
 outsheet = workbook.add_worksheet(name="Data")
 pcset = {}
 y_index = 0
@@ -16,6 +16,7 @@ notorphans = set()
 def main():
     print(datetime.now())
     excel_init()
+    # data path
     parent_child_finder("../Data/Nigeria20years.csv")
     workbook.close()
     print(datetime.now())
@@ -37,6 +38,7 @@ def parent_child_finder(filename):
         orphan = True
         id1, date1, latt1, long1, deaths1 = data_split(parent)
         if id1 in notorphans:
+            fam_id -= 1
             continue
         childfinder(dataset[count:], parent, depth, fam_id, rel_id)
         if not orphan:
@@ -45,6 +47,7 @@ def parent_child_finder(filename):
             result_excel(fam_id, latt1, long1, date1, deaths1,id1)
         else:
             y_index += 1
+            fam_id -= 1
             result_excel(0, latt1, long1, date1, deaths1,id1)
         continue
 
