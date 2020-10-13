@@ -11,7 +11,7 @@ import subprocess
 imagenumber = 0
 
 
-def data_mapper(data, countryname, date, notemptydata):
+def data_mapper(data, countryname, date, datelist, notemptydata):
     global imagenumber
     # countryname = countryname.capitalize()
     world = geopandas.read_file(geopandas.datasets.get_path('naturalearth_lowres'))
@@ -20,13 +20,17 @@ def data_mapper(data, countryname, date, notemptydata):
     title = str(countryname) + "\n" + str(date)
     plt.title(title)
     if notemptydata:
-        data.plot(ax=ax, kind="scatter", x="Longitude", y="Latitude",
-                  s="Casualties", c="Colour", colorbar=False, alpha=0.6)
+        for time in datelist.keys():
+            newdata = data[data["Date"] == time]
+            if not newdata.empty:
+                alpha = datelist[time]
+                newdata.plot(ax=ax, kind="scatter", x="Longitude", y="Latitude",
+                      s="Casualties", c="Colour", colorbar=False, alpha=alpha)
     else:
         plt.xlabel("Longitude")
         plt.ylabel("Latitude")
     imagenumber += 1
-    imagename = countryname.replace(".",'').replace(" ","-")
+    imagename = countryname.replace(".",'').strip(" ")
     picture_storage_location = "../Results/DemRepCongo/Images/" + str(imagename) + "." + str(imagenumber).zfill(
         6) + ".png"
     plt.savefig(picture_storage_location)
@@ -34,12 +38,32 @@ def data_mapper(data, countryname, date, notemptydata):
 
 
 def mapcreate(datafile, country, date):
-    data = datafile[datafile["Date"] == date]
-    if data.empty:
-        data_mapper(data, country, date, False)
+    # data = datafile[datafile["Date"] == date]
+    result,datelist = addtransparency(datafile,date)
+    date = dateconvertback(date)
+    if not result.empty:
+        data_mapper(result, country, date, datelist, True)
     else:
-        data_mapper(data, country, date, True)
+        data_mapper(result, country, date,datelist, False)
 
+def addtransparency(data,date):
+    prevdate = date - timedelta(days=1)
+    daybefore = prevdate - timedelta(days=1)
+    dates = [dateconvertback(daybefore),dateconvertback(prevdate),dateconvertback(date)]
+    trans = [0.2,0.5,0.75]
+    dic_trans = {a:b for a,b in zip(dates,trans)}
+    finaldata = []
+    for DATE in dates:
+        newdata = data[data["Date"] == DATE]
+        if not newdata.empty:
+            finaldata.append(newdata)
+    if len(finaldata) != 0:
+        result = pd.concat(finaldata)
+    else:
+        result = pd.DataFrame()
+    # if not result.empty:
+    #     result["transparency"] = result["Date"].map(dic_trans)
+    return result,dic_trans
 
 
 def addcolorcolumn(data):
@@ -91,7 +115,7 @@ def start_end_date_return(data):
 
 def init(csv_file, country):
     data = pd.read_csv(csv_file)
-    data = data[:100]
+    data = data[:365]
     data = addcolorcolumn(data)
     data["Casualties"] = data["Casualties"] + 5
     start_date, end_date = start_end_date_return(data)
@@ -102,8 +126,9 @@ def init(csv_file, country):
     # DO THE DATE thing at the map create function since the data we parse doesnt have all the dates in
     #we can individual just add them to a different dataframe for analysis
     while start_date <= end_date:
-        converteddate = dateconvertback(start_date)
-        mapcreate(data, country, converteddate)
+        # converteddate = dateconvertback(start_date)
+        # mapcreate(data, country, converteddate)
+        mapcreate(data, country, start_date)
         start_date += delta
     print("Done")
 
@@ -111,7 +136,7 @@ def init(csv_file, country):
 def videocreate():
     # input has to change based on the country used
     input = r"C:\Users\k2kis\Desktop\Research\Code\Results\DemRepCongo\Images\Dem Rep Congo.%06d.png"
-    output = r"C:\Users\k2kis\Desktop\Research\Code\Results\DemRepCongo\300km_Congo_Video.mp4"
+    output = r"C:\Users\k2kis\Desktop\Research\Code\Results\DemRepCongo\30km_trans_Congo_Video.mp4"
     frame_rate = 5
     cmd = f'ffmpeg -framerate {frame_rate} -i "{input}" "{output}"'
     subprocess.check_output(cmd, shell=True)

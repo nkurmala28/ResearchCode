@@ -2,22 +2,21 @@ import xlsxwriter as xw
 from datetime import datetime
 from geopy.distance import great_circle
 
-# ALWAYS MAKE SURE THE DATA IS ALREADY PRE ARRANGED FROM PAST TO PRESENT DATE-WISE
-# and delete first row if column headers
-
-# input your own dire and name for result
-workbook = xw.Workbook('C:/Users/k2kis/Desktop/Research/Code/results/worksomehow.xlsx')
+# input your own directory and name where the result will be saved
+workbook = xw.Workbook('C:/Users/k2kis/Desktop/Research/Code/Results/CongoData.xlsx')
 outsheet = workbook.add_worksheet(name="Data")
 pcset = {}
 y_index = 0
 orphan = True
 notorphans = set()
 
+
 def main():
     print(datetime.now())
     excel_init()
-    # data path
-    parent_child_finder("../Data/Nigeria20years.csv")
+    # data path. Make sure data arranged (old to new) and cleaned with no header and only 5 columns:
+    # unique_id, date, latt, long, casualties
+    parent_child_finder("../Data/DemRepCongo.csv")
     workbook.close()
     print(datetime.now())
     pass
@@ -44,16 +43,16 @@ def parent_child_finder(filename):
         if not orphan:
             y_index += 1
             notorphans.add(id1)
-            result_excel(fam_id, latt1, long1, date1, deaths1,id1)
+            result_excel(fam_id, latt1, long1, date1, deaths1, id1)
         else:
             y_index += 1
             fam_id -= 1
-            result_excel(0, latt1, long1, date1, deaths1,id1)
+            result_excel(0, latt1, long1, date1, deaths1, id1)
         continue
 
 
 def childfinder(trial, parent, depth, fam_id, rel_id):
-    global y_index, pcset,orphan, notorphans
+    global y_index, pcset, orphan, notorphans
     id1, date1, latt1, long1, deaths1 = data_split(parent)
     time1 = datetime.strptime(date1, '%d-%b-%y')
     loc1 = (latt1, long1)
@@ -75,17 +74,16 @@ def childfinder(trial, parent, depth, fam_id, rel_id):
         if duration > 5:
             break
         dist = great_circle(loc1, loc2).kilometers
-        if dist >= 0 and dist <= 10 and duration >= 0 and duration <= 5:
+        if dist >= 0 and dist <= 30 and duration >= 0 and duration <= 5:
             # fix the above in tree excel
             y_index += 1
             pcset[id1] = id2
             rel_id += 1
             orphan = False
-            result_excel(fam_id, latt2, long2, date2, deaths2,id2)
+            result_excel(fam_id, latt2, long2, date2, deaths2, id2)
             notorphans.add(id2)
             childfinder(trial[count:], otherchildren, depth, fam_id, rel_id)
             continue
-
 
 
 def data_split(node):
@@ -95,24 +93,31 @@ def data_split(node):
 
 
 def excel_init():
-    outsheet.write("A1", "Family ID")  # (y,1)
-    outsheet.write("B1", "Latitude")  # (y,3)
+    outsheet.write("A1", "Family ID")  # family ID assigned based on the criteria
+    outsheet.write("B1", "Latitude")
     outsheet.write("C1", "Longitude")
     outsheet.write("D1", "Date")
     outsheet.write('E1', "Casualties")
-    outsheet.write("F1","ID")
+    outsheet.write("F1", "ID")
 
 
-def result_excel(Fam_ID,P_latt, P_long,P_date,Casualties,ID):
+def result_excel(Fam_ID, P_latt, P_long, P_date, Casualties, ID):
     outsheet.write(y_index, 0, Fam_ID)  # (y,1)
     outsheet.write(y_index, 1, P_latt)  # (y,3)
     outsheet.write(y_index, 2, P_long)
     outsheet.write(y_index, 3, P_date)
     outsheet.write(y_index, 4, Casualties)
-    outsheet.write(y_index,5,ID)
+    outsheet.write(y_index, 5, ID)
     # direction
 
 
 if __name__ == "__main__":
     main()
+
+# IMPROVMENTS
+# clean up parent_child function with the id being +- 1 all the time
+
+# CHANGES WHEN NEEDED
+# workbook string on the top, thats the location where result gets stored
+# excel sheet location in main, parent_child func
 
