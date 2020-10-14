@@ -1,9 +1,11 @@
 import xlsxwriter as xw
 from datetime import datetime
 from geopy.distance import great_circle
+import sys
+sys.setrecursionlimit(5000)
 
 # input your own directory and name where the result will be saved
-workbook = xw.Workbook('C:/Users/k2kis/Desktop/Research/Code/Results/CongoData.xlsx')
+workbook = xw.Workbook('C:/Users/k2kis/Desktop/Research/Code/Results/5Country/fiveresults.xlsx')
 outsheet = workbook.add_worksheet(name="Data")
 pcset = {}
 y_index = 0
@@ -16,7 +18,7 @@ def main():
     excel_init()
     # data path. Make sure data arranged (old to new) and cleaned with no header and only 5 columns:
     # unique_id, date, latt, long, casualties
-    parent_child_finder("../Data/DemRepCongo.csv")
+    parent_child_finder("../Data/5countrydata.csv")
     workbook.close()
     print(datetime.now())
     pass

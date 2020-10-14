@@ -30,7 +30,7 @@ def data_mapper(data, countryname, date, datelist, notemptydata):
         plt.xlabel("Longitude")
         plt.ylabel("Latitude")
     imagenumber += 1
-    imagename = countryname.replace(".",'').strip(" ")
+    imagename = countryname.replace(".",'').replace(" ",'-')
     picture_storage_location = "../Results/DemRepCongo/Images/" + str(imagename) + "." + str(imagenumber).zfill(
         6) + ".png"
     plt.savefig(picture_storage_location)
@@ -38,7 +38,6 @@ def data_mapper(data, countryname, date, datelist, notemptydata):
 
 
 def mapcreate(datafile, country, date):
-    # data = datafile[datafile["Date"] == date]
     result,datelist = addtransparency(datafile,date)
     date = dateconvertback(date)
     if not result.empty:
@@ -50,7 +49,7 @@ def addtransparency(data,date):
     prevdate = date - timedelta(days=1)
     daybefore = prevdate - timedelta(days=1)
     dates = [dateconvertback(daybefore),dateconvertback(prevdate),dateconvertback(date)]
-    trans = [0.2,0.5,0.75]
+    trans = [0.2,0.45,0.75]
     dic_trans = {a:b for a,b in zip(dates,trans)}
     finaldata = []
     for DATE in dates:
@@ -61,13 +60,12 @@ def addtransparency(data,date):
         result = pd.concat(finaldata)
     else:
         result = pd.DataFrame()
-    # if not result.empty:
-    #     result["transparency"] = result["Date"].map(dic_trans)
     return result,dic_trans
 
 
+
 def addcolorcolumn(data):
-    clrs = sns.color_palette("Paired")
+    clrs = sns.color_palette("Set1")
     famids = data["Family ID"].unique()
     zip_list = zip(famids, cycle(clrs)) if len(famids) > len(clrs) else zip(cycle(famids), clrs)
     colourlist = list(zip_list)
@@ -115,29 +113,22 @@ def start_end_date_return(data):
 
 def init(csv_file, country):
     data = pd.read_csv(csv_file)
-    data = data[:365]
     data = addcolorcolumn(data)
     data["Casualties"] = data["Casualties"] + 5
     start_date, end_date = start_end_date_return(data)
     delta = timedelta(days=1)
-    #do a ting where add 2 extra dates to start date and check if you can print 3 days each time
-    #check if you can do varying transparency like how we did colours = id
-    #CHANGE OF PLAN
-    # DO THE DATE thing at the map create function since the data we parse doesnt have all the dates in
-    #we can individual just add them to a different dataframe for analysis
+    end_date = end_date + delta + delta
     while start_date <= end_date:
-        # converteddate = dateconvertback(start_date)
-        # mapcreate(data, country, converteddate)
         mapcreate(data, country, start_date)
         start_date += delta
-    print("Done")
+    print("Done Creating Images")
 
 
 def videocreate():
     # input has to change based on the country used
-    input = r"C:\Users\k2kis\Desktop\Research\Code\Results\DemRepCongo\Images\Dem Rep Congo.%06d.png"
-    output = r"C:\Users\k2kis\Desktop\Research\Code\Results\DemRepCongo\30km_trans_Congo_Video.mp4"
-    frame_rate = 5
+    input = r"C:\Users\k2kis\Desktop\Research\Code\Results\DemRepCongo\Images\Dem-Rep-Congo.%06d.png"
+    output = r"C:\Users\k2kis\Desktop\Research\Code\Results\DemRepCongo\20y_Congo_Video.mp4"
+    frame_rate = 6
     cmd = f'ffmpeg -framerate {frame_rate} -i "{input}" "{output}"'
     subprocess.check_output(cmd, shell=True)
 
@@ -148,6 +139,7 @@ def main():
     init("../Results/CongoData.csv", "Dem. Rep. Congo")
     videocreate()
     print(datetime.now())
+    print("End of Script")
 
 
 if __name__ == "__main__":
