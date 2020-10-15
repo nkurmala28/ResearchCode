@@ -5,19 +5,34 @@ from datetime import datetime, timedelta, date
 from itertools import cycle
 import seaborn as sns
 import subprocess
+from descartes import PolygonPatch
 
 # input only csv files not xlsx files
 
 imagenumber = 0
-
-
-def data_mapper(data, countryname, date, datelist, notemptydata):
-    global imagenumber
-    # countryname = countryname.capitalize()
+def plotCountryPatch( axes, country_name, fcolor ):
     world = geopandas.read_file(geopandas.datasets.get_path('naturalearth_lowres'))
-    country = world[world['name'] == countryname]
-    ax = country.plot(color='white', edgecolor='black')
-    title = str(countryname) + "\n" + str(date)
+    nami = world[world.name == country_name]
+    namigm = nami.__geo_interface__['features']  # geopandas's geo_interface
+    namig0 = {'type': namigm[0]['geometry']['type'],
+              'coordinates': namigm[0]['geometry']['coordinates']}
+    axes.add_patch(PolygonPatch( namig0, fc=fcolor, ec="black", alpha=0.15, zorder=2 ))
+
+def data_mapper(data, date, datelist, notemptydata):
+    global imagenumber
+    world = geopandas.read_file(geopandas.datasets.get_path('naturalearth_lowres'))
+    ax = world[world.continent == "Africa"].plot(color='white', edgecolor='black')
+    plt.xlim(right=41)
+    plt.xlim(left=12)
+    plt.ylim(top=5.1)
+    plt.ylim(bottom=-13.2)
+
+    plotCountryPatch(ax, 'Tanzania', 'grey')
+    plotCountryPatch(ax, 'Burundi', 'grey')
+    plotCountryPatch(ax, 'Rwanda', 'grey')
+    plotCountryPatch(ax, "Dem. Rep. Congo", 'grey')
+    plotCountryPatch(ax, 'Uganda', 'grey')
+    title = "D.R.C, UGA, TZ, BI, RWA" + "\n" + str(date)
     plt.title(title)
     if notemptydata:
         for time in datelist.keys():
@@ -30,20 +45,21 @@ def data_mapper(data, countryname, date, datelist, notemptydata):
         plt.xlabel("Longitude")
         plt.ylabel("Latitude")
     imagenumber += 1
-    imagename = countryname.replace(".",'').replace(" ",'-')
-    picture_storage_location = "../Results/DemRepCongo/Images/" + str(imagename) + "." + str(imagenumber).zfill(
+    # imagename = countryname.replace(".",'').replace(" ",'-')
+    imagename = "fivecountry"
+    picture_storage_location = "../Results/5Country/Images/" + str(imagename) + "." + str(imagenumber).zfill(
         6) + ".png"
     plt.savefig(picture_storage_location)
     plt.close()
 
 
-def mapcreate(datafile, country, date):
+def mapcreate(datafile, date):
     result,datelist = addtransparency(datafile,date)
     date = dateconvertback(date)
     if not result.empty:
-        data_mapper(result, country, date, datelist, True)
+        data_mapper(result, date, datelist, True)
     else:
-        data_mapper(result, country, date,datelist, False)
+        data_mapper(result, date,datelist, False)
 
 def addtransparency(data,date):
     prevdate = date - timedelta(days=1)
@@ -65,7 +81,7 @@ def addtransparency(data,date):
 
 
 def addcolorcolumn(data):
-    clrs = sns.color_palette("Set1")
+    clrs = sns.color_palette("Paired",9)
     famids = data["Family ID"].unique()
     zip_list = zip(famids, cycle(clrs)) if len(famids) > len(clrs) else zip(cycle(famids), clrs)
     colourlist = list(zip_list)
@@ -111,7 +127,7 @@ def start_end_date_return(data):
     return start_date, end_date
 
 
-def init(csv_file, country):
+def init(csv_file):
     data = pd.read_csv(csv_file)
     data = addcolorcolumn(data)
     data["Casualties"] = data["Casualties"] + 5
@@ -119,15 +135,15 @@ def init(csv_file, country):
     delta = timedelta(days=1)
     end_date = end_date + delta + delta
     while start_date <= end_date:
-        mapcreate(data, country, start_date)
+        mapcreate(data, start_date)
         start_date += delta
     print("Done Creating Images")
 
 
 def videocreate():
     # input has to change based on the country used
-    input = r"C:\Users\k2kis\Desktop\Research\Code\Results\DemRepCongo\Images\Dem-Rep-Congo.%06d.png"
-    output = r"C:\Users\k2kis\Desktop\Research\Code\Results\DemRepCongo\20y_Congo_Video.mp4"
+    input = r"C:\Users\k2kis\Desktop\Research\Code\Results\5Country\Images\fivecountry.%06d.png"
+    output = r"C:\Users\k2kis\Desktop\Research\Code\Results\5Country\fivecountryresult.mp4"
     frame_rate = 6
     cmd = f'ffmpeg -framerate {frame_rate} -i "{input}" "{output}"'
     subprocess.check_output(cmd, shell=True)
@@ -136,7 +152,7 @@ def videocreate():
 def main():
     print(datetime.now())
     # must be csv
-    init("../Results/CongoData.csv", "Dem. Rep. Congo")
+    # init("../Results/5Country/fiveresults.csv")
     videocreate()
     print(datetime.now())
     print("End of Script")
@@ -150,6 +166,7 @@ if __name__ == "__main__":
 
 # IMPROVEMENTS
 # need to add argument in mapper to plot points of natural resources
+#CHOOSE A COLOUR PALETTE THAT DOESNT HAVE GREY IN IT
 
 # CHANGES WHEN NEEDED
 # change the string of storage location of nametitle inside data_mapper function (location where the pic are stored)
